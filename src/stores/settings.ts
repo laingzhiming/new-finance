@@ -30,6 +30,31 @@ export const useSettingsStore = defineStore('settings', {
       if (typeof document !== 'undefined') {
         document.documentElement.setAttribute('data-theme', theme)
       }
+
+      if (typeof uni !== 'undefined' && typeof uni.setTabBarStyle === 'function') {
+        if (theme === Theme.Light) {
+          uni.setTabBarStyle({
+            color: '#64748b',
+            selectedColor: '#4f46e5',
+            backgroundColor: '#f1f5f9',
+            borderStyle: 'black'
+          })
+        } else if (theme === Theme.Cyberpunk) {
+          uni.setTabBarStyle({
+            color: '#9ca3af',
+            selectedColor: '#00f0ff',
+            backgroundColor: '#0a0a0a',
+            borderStyle: 'black'
+          })
+        } else {
+          uni.setTabBarStyle({
+            color: '#9ca3af',
+            selectedColor: '#818cf8',
+            backgroundColor: '#0f172a',
+            borderStyle: 'black'
+          })
+        }
+      }
     },
 
     // 设置货币

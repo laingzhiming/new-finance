@@ -27,6 +27,13 @@
         "navigationBarTitleText": "设置",
         "navigationStyle": "custom"
       }
+    },
+    {
+      "path": "pages/404",
+      "style": {
+        "navigationBarTitleText": "页面未找到",
+        "navigationStyle": "custom"
+      }
     }
   ],
   "tabBar": {

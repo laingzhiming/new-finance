@@ -1,7 +1,7 @@
 <template>
   <view class="statistics-container">
     <!-- 自定义导航栏 -->
-    <view class="custom-navbar glass-card">
+    <view class="custom-navbar glass-card slide-in-down">
       <text class="navbar-title">数据统计</text>
       <view class="date-selector" @click="showDatePicker">
         <text>{{ currentMonth }}</text>
@@ -10,7 +10,7 @@
     </view>
 
     <!-- 概览卡片 -->
-    <view class="overview-card glass-card">
+    <view class="overview-card glass-card soft-float">
       <view class="overview-item">
         <text class="overview-label">收入</text>
         <text class="overview-value income">+{{ statistics.totalIncome.toFixed(2) }}</text>
@@ -30,7 +30,7 @@
     </view>
 
     <!-- 图表容器 -->
-    <view class="chart-section glass-card">
+    <view class="chart-section glass-card slide-in-up">
       <text class="section-title">支出趋势</text>
       <view class="chart-container">
         <canvas type="2d" id="trendChart" class="chart-canvas"></canvas>
@@ -38,7 +38,7 @@
     </view>
 
     <!-- 分类占比 -->
-    <view class="chart-section glass-card">
+    <view class="chart-section glass-card slide-in-up">
       <text class="section-title">分类占比</text>
       <view class="chart-container">
         <canvas type="2d" id="pieChart" class="chart-canvas"></canvas>
@@ -46,7 +46,7 @@
     </view>
 
     <!-- 分类明细 -->
-    <view class="category-detail glass-card">
+    <view class="category-detail glass-card slide-in-up">
       <text class="section-title">分类明细</text>
       <view v-for="(item, index) in categoryDetails" :key="index" class="detail-item">
         <view class="detail-left">
@@ -136,7 +136,6 @@ const initTrendChart = () => {
       if (!res || !res[0]) return
 
       const canvas = res[0].node
-      const ctx = canvas.getContext('2d')
 
       // 设置 canvas 尺寸
       const dpr = uni.getSystemInfoSync().pixelRatio || 1
@@ -274,7 +273,6 @@ const initPieChart = () => {
       if (!res || !res[0]) return
 
       const canvas = res[0].node
-      const ctx = canvas.getContext('2d')
 
       const dpr = uni.getSystemInfoSync().pixelRatio || 1
       canvas.width = res[0].width * dpr
@@ -357,7 +355,6 @@ onMounted(() => {
 .statistics-container {
   min-height: 100vh;
   background: var(--bg-primary);
-  padding-bottom: calc(100px + env(safe-area-inset-bottom));
 }
 
 /* 导航栏 */

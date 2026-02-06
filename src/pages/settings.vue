@@ -1,12 +1,12 @@
 <template>
   <view class="settings-container">
     <!-- 自定义导航栏 -->
-    <view class="custom-navbar glass-card">
+    <view class="custom-navbar glass-card slide-in-down">
       <text class="navbar-title">设置</text>
     </view>
 
     <!-- 主题切换 -->
-    <view class="settings-section glass-card">
+    <view class="settings-section glass-card slide-in-up">
       <text class="section-title">主题设置</text>
       <view class="theme-options">
         <view
@@ -25,7 +25,7 @@
     </view>
 
     <!-- 货币设置 -->
-    <view class="settings-section glass-card">
+    <view class="settings-section glass-card slide-in-up">
       <text class="section-title">货币设置</text>
       <view class="setting-item" @click="showCurrencyPicker">
         <text class="setting-label">货币符号</text>
@@ -37,7 +37,7 @@
     </view>
 
     <!-- 通知设置 -->
-    <view class="settings-section glass-card">
+    <view class="settings-section glass-card slide-in-up">
       <text class="section-title">通知设置</text>
       <view class="setting-item">
         <text class="setting-label">启用通知</text>
@@ -50,7 +50,7 @@
     </view>
 
     <!-- 数据管理 -->
-    <view class="settings-section glass-card">
+    <view class="settings-section glass-card slide-in-up">
       <text class="section-title">数据管理</text>
       <view class="setting-item" @click="exportData">
         <text class="setting-label">导出数据</text>
@@ -67,7 +67,7 @@
     </view>
 
     <!-- 关于 -->
-    <view class="settings-section glass-card">
+    <view class="settings-section glass-card slide-in-up">
       <text class="section-title">关于</text>
       <view class="about-info">
         <text class="app-name">Neo-Finance TS Pro</text>
@@ -181,7 +181,6 @@ const clearData = () => {
 .settings-container {
   min-height: 100vh;
   background: var(--bg-primary);
-  padding-bottom: calc(100px + env(safe-area-inset-bottom));
 }
 
 /* 导航栏 */

@@ -1,15 +1,43 @@
 <template>
   <view class="home-container">
-    <!-- 自定义导航栏 -->
-    <view class="custom-navbar glass-card">
-      <text class="navbar-title">Neo-Finance</text>
-      <view class="navbar-right" @click="goToSettings">
-        <text class="icon">⚙️</text>
+    <!-- 搜索和筛选栏 -->
+    <view class="search-filter-bar slide-in-down">
+      <view class="search-box glass-card">
+        <text class="search-icon">🔍</text>
+        <input
+          v-model="searchKeyword"
+          class="search-input"
+          placeholder="搜索账单或备注..."
+          placeholder-class="placeholder"
+          @input="handleSearch"
+        />
+        <view v-if="searchKeyword" class="clear-btn" @click="clearSearch">
+          <text>✕</text>
+        </view>
+      </view>
+      <view class="filter-scroll glass-card">
+        <view
+          class="filter-btn"
+          :class="{ active: activeFilter === 'all' }"
+          @click="setFilter('all')"
+        >
+          <text>全部</text>
+        </view>
+        <view
+          v-for="(config, category) in CategoryConfigMap"
+          :key="category"
+          class="filter-btn"
+          :class="{ active: activeFilter === category }"
+          @click="setFilter(category)"
+        >
+          <text class="filter-icon">{{ config.icon }}</text>
+          <text class="filter-label">{{ config.label }}</text>
+        </view>
       </view>
     </view>
 
     <!-- 余额卡片 - 玻璃拟态 3D 质感 -->
-    <view class="balance-card glass-card neon-glow">
+    <view class="balance-card glass-card neon-glow soft-float">
       <view class="balance-header">
         <text class="balance-label">总余额</text>
         <text class="currency">¥</text>
@@ -18,12 +46,12 @@
         <text class="amount number-animate">{{ animatedBalance }}</text>
       </view>
       <view class="balance-footer">
-        <view class="balance-item">
+        <view class="balance-item" @click="goToStatistics">
           <text class="item-label">本月收入</text>
           <text class="item-value income">+{{ statistics.totalIncome.toFixed(2) }}</text>
         </view>
         <view class="balance-divider"></view>
-        <view class="balance-item">
+        <view class="balance-item" @click="goToStatistics">
           <text class="item-label">本月支出</text>
           <text class="item-value expense">-{{ statistics.totalExpense.toFixed(2) }}</text>
         </view>
@@ -31,7 +59,7 @@
     </view>
 
     <!-- 快捷操作 -->
-    <view class="quick-actions">
+    <view class="quick-actions slide-in-up">
       <view class="action-btn glass-card" @click="addExpense">
         <text class="action-icon">💸</text>
         <text class="action-text">支出</text>
@@ -47,7 +75,7 @@
     </view>
 
     <!-- 分类支出进度 -->
-    <view class="category-progress glass-card">
+    <view class="category-progress glass-card slide-in-up">
       <text class="section-title">分类支出</text>
       <view v-for="(item, index) in topCategories" :key="index" class="progress-item">
         <view class="progress-header">
@@ -67,7 +95,7 @@
     </view>
 
     <!-- 最近账单 -->
-    <view class="recent-bills glass-card">
+    <view class="recent-bills glass-card slide-in-up">
       <text class="section-title">最近账单</text>
       <view
         v-for="bill in recentBills"
@@ -94,13 +122,17 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import type { BillItem, StatisticsData } from '@/types'
 import { BillCategory, CategoryConfigMap } from '@/types'
 import { useBillStore } from '@/stores/bill'
 import { useNumberAnimation } from '@/composables/useNumberAnimation'
 
 const billStore = useBillStore()
+
+// 搜索和筛选状态
+const searchKeyword = ref<string>('')
+const activeFilter = ref<string>('all')
 
 // 统计数据
 const statistics = computed<StatisticsData>(() => billStore.statistics)
@@ -112,7 +144,27 @@ const { animatedValue: animatedBalance } = useNumberAnimation(
 )
 
 // 最近账单
-const recentBills = computed<BillItem[]>(() => billStore.bills.slice(0, 5))
+const recentBills = computed<BillItem[]>(() => {
+  let filtered = billStore.bills
+
+  // 按分类筛选
+  if (activeFilter.value !== 'all') {
+    filtered = filtered.filter(bill => bill.category === activeFilter.value)
+  }
+
+  // 按搜索关键词筛选
+  if (searchKeyword.value.trim()) {
+    const keyword = searchKeyword.value.toLowerCase()
+    filtered = filtered.filter(
+      bill =>
+        bill.remark.toLowerCase().includes(keyword) ||
+        getCategoryLabel(bill.category).toLowerCase().includes(keyword) ||
+        bill.amount.toString().includes(keyword)
+    )
+  }
+
+  return filtered.slice(0, 5)
+})
 
 // 分类支出 Top 3
 const topCategories = computed(() => {
@@ -159,28 +211,36 @@ const formatDate = (dateStr: string): string => {
 // 跳转到记账页面
 const addExpense = () => {
   uni.navigateTo({
-    url: '/pages/record/record?type=expense'
+    url: '/pages/record?type=expense'
   })
 }
 
 const addIncome = () => {
   uni.navigateTo({
-    url: '/pages/record/record?type=income'
+    url: '/pages/record?type=income'
   })
 }
 
 // 跳转到统计页面
 const goToStatistics = () => {
   uni.switchTab({
-    url: '/pages/statistics/statistics'
+    url: '/pages/statistics'
   })
 }
 
-// 跳转到设置页面
-const goToSettings = () => {
-  uni.switchTab({
-    url: '/pages/settings/settings'
-  })
+// 搜索处理
+const handleSearch = () => {
+  // 实时搜索
+}
+
+// 清空搜索
+const clearSearch = () => {
+  searchKeyword.value = ''
+}
+
+// 设置筛选
+const setFilter = (filter: string) => {
+  activeFilter.value = filter
 }
 
 // 查看账单详情
@@ -199,36 +259,131 @@ onMounted(() => {
 .home-container {
   min-height: 100vh;
   background: var(--bg-primary);
-  padding-bottom: calc(100px + env(safe-area-inset-bottom));
 }
 
-/* 导航栏 */
-.custom-navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: calc(var(--status-bar-height) + 12px) 20px 12px;
-  margin: 16px 16px 20px;
+/* 搜索筛选栏 */
+.search-filter-bar {
+  padding: calc(var(--status-bar-height) + 8px) 0 12px;
   position: sticky;
   top: 0;
   z-index: 100;
 }
 
-.navbar-title {
-  font-size: 24px;
-  font-weight: bold;
+.search-box {
+  display: flex;
+  align-items: center;
+  border-radius: 16px;
+  padding: 12px 14px;
+  margin: 0 16px 10px;
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.search-icon {
+  font-size: 16px;
+  margin-right: 10px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  font-size: 14px;
+  padding: 4px 0;
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.placeholder {
+  color: var(--text-muted);
+}
+
+.clear-btn {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.clear-btn:active {
+  transform: scale(0.9);
+  background: var(--primary-color);
+  color: white;
+}
+
+/* 筛选按钮 */
+.filter-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 10px 12px;
+  margin: 0 16px;
+  border-radius: 16px;
+  scroll-behavior: smooth;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.filter-btn {
+  min-width: 64px;
+  padding: 8px 10px;
+  background: var(--bg-tertiary);
+  border-radius: 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex-shrink: 0;
+  flex-direction: column;
+  &:first-child {
+    font-size: 16px;
+  }
+}
+
+.filter-label {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.filter-btn:active {
+  transform: scale(0.95);
+}
+
+.filter-btn.active {
   background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
 }
 
-.navbar-right {
-  padding: 8px;
+.filter-icon {
+  font-size: 22px;
 }
 
-.icon {
-  font-size: 20px;
+.settings-btn {
+  margin-left: auto;
 }
 
 /* 余额卡片 */

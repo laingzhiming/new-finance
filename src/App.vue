@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
+import { onLaunch, onShow, onHide, onPageNotFound } from '@dcloudio/uni-app'
 import { useSettingsStore } from '@/stores/settings'
 import { useBillStore } from '@/stores/bill'
 import { BillType, BillCategory, type BillItem } from '@/types'
@@ -109,6 +109,12 @@ onShow(() => {
 onHide(() => {
   console.log('App Hide')
 })
+
+onPageNotFound(() => {
+  uni.reLaunch({
+    url: '/pages/404'
+  })
+})
 </script>
 
 <style>
@@ -187,6 +193,30 @@ textarea {
   }
 }
 
+@keyframes floatSoft {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 0 rgba(99, 102, 241, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(99, 102, 241, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(99, 102, 241, 0.2);
+  }
+}
+
 .fade-in {
   animation: fadeIn var(--transition-base);
 }
@@ -197,5 +227,13 @@ textarea {
 
 .slide-in-down {
   animation: slideInDown var(--transition-base);
+}
+
+.soft-float {
+  animation: floatSoft 6s ease-in-out infinite;
+}
+
+.pulse-glow {
+  animation: pulseGlow 3s ease-in-out infinite;
 }
 </style>
