@@ -1,0 +1,225 @@
+/**
+ * Neo-Finance Design Tokens
+ * 基于 CSS 变量的主题系统
+ */
+
+:root {
+  /* 默认主题 (Dark) */
+  --primary-color: #6366f1;
+  --secondary-color: #8b5cf6;
+  --accent-color: #ec4899;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+
+  /* 背景色 */
+  --bg-primary: #0f0f1e;
+  --bg-secondary: #1a1a2e;
+  --bg-tertiary: #16213e;
+
+  /* 玻璃拟态 */
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: rgba(0, 0, 0, 0.3);
+
+  /* 文字颜色 */
+  --text-main: #f8f9fa;
+  --text-secondary: #adb5bd;
+  --text-muted: #6c757d;
+
+  /* 边框和阴影 */
+  --border-color: rgba(255, 255, 255, 0.1);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 15px rgba(99, 102, 241, 0.5);
+
+  /* 渐变 */
+  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --gradient-secondary: linear-gradient(135deg, #ec4899 0%, #f59e0b 100%);
+  --gradient-glass: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+
+  /* 动画时长 */
+  --transition-fast: 150ms;
+  --transition-base: 300ms;
+  --transition-slow: 500ms;
+}
+
+/* Cyberpunk 主题 */
+[data-theme='cyberpunk'] {
+  --primary-color: #00f0ff;
+  --secondary-color: #ff00ff;
+  --accent-color: #ffff00;
+  --success-color: #00ff41;
+  --warning-color: #ffa500;
+  --error-color: #ff0055;
+
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #1a0033;
+  --bg-tertiary: #2d0066;
+
+  --glass-bg: rgba(0, 240, 255, 0.05);
+  --glass-border: rgba(0, 240, 255, 0.2);
+  --glass-shadow: rgba(0, 240, 255, 0.3);
+
+  --text-main: #00f0ff;
+  --text-secondary: #ff00ff;
+  --text-muted: #8b8b8b;
+
+  --border-color: rgba(0, 240, 255, 0.3);
+  --shadow-glow: 0 0 20px rgba(0, 240, 255, 0.8);
+
+  --gradient-primary: linear-gradient(135deg, #00f0ff 0%, #ff00ff 100%);
+  --gradient-secondary: linear-gradient(135deg, #ffff00 0%, #ff0055 100%);
+}
+
+/* Light 主题 */
+[data-theme='light'] {
+  --primary-color: #4f46e5;
+  --secondary-color: #7c3aed;
+  --accent-color: #db2777;
+  --success-color: #059669;
+  --warning-color: #d97706;
+  --error-color: #dc2626;
+
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-shadow: rgba(0, 0, 0, 0.1);
+
+  --text-main: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+
+  --border-color: rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+  --shadow-glow: 0 0 15px rgba(79, 70, 229, 0.3);
+
+  --gradient-primary: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  --gradient-secondary: linear-gradient(135deg, #db2777 0%, #d97706 100%);
+}
+
+/* 全局样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  transition:
+    background-color var(--transition-base),
+    color var(--transition-base);
+}
+
+/* 玻璃拟态效果 */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-md);
+}
+
+/* 发光效果 */
+.neon-glow {
+  box-shadow: var(--shadow-glow);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: var(--shadow-glow);
+  }
+  50% {
+    box-shadow: 0 0 25px var(--primary-color);
+  }
+}
+
+/* 渐变背景 */
+.gradient-bg {
+  background: var(--gradient-primary);
+}
+
+/* 按钮样式 */
+.btn-primary {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  background: var(--gradient-primary);
+  color: white;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.btn-primary:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-glow);
+}
+
+.btn-primary:active {
+  transform: scale(0.95);
+}
+
+/* 进度条 */
+.progress-bar {
+  position: relative;
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--gradient-primary);
+  border-radius: 4px;
+  transition: width var(--transition-slow);
+  box-shadow: var(--shadow-glow);
+}
+
+/* 卡片容器 */
+.card-container {
+  padding: 1.5rem;
+  margin: 1rem 0;
+}
+
+/* 数字滚动动画 */
+.number-animate {
+  transition: all var(--transition-base);
+}
+
+/* 页面过渡 */
+.page-enter-active,
+.page-leave-active {
+  transition: all var(--transition-base);
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
+}

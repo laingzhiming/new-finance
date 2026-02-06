@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  neo-finance:
+    build: .
+    container_name: neo-finance
+    ports:
+      - '8080:80'
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    networks:
+      - neo-finance-network
+
+networks:
+  neo-finance-network:
+    driver: bridge

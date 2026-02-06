@@ -1,0 +1,16 @@
+node_modules/
+dist/
+unpackage/
+.hbuilderx/
+*.log
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.swn
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln

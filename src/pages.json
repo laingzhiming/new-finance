@@ -1,0 +1,65 @@
+{
+  "pages": [
+    {
+      "path": "pages/index",
+      "style": {
+        "navigationBarTitleText": "Neo-Finance",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/record",
+      "style": {
+        "navigationBarTitleText": "记账",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/statistics",
+      "style": {
+        "navigationBarTitleText": "统计",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/settings",
+      "style": {
+        "navigationBarTitleText": "设置",
+        "navigationStyle": "custom"
+      }
+    }
+  ],
+  "tabBar": {
+    "color": "#9ca3af",
+    "selectedColor": "#818cf8",
+    "borderStyle": "black",
+    "backgroundColor": "#0f172a",
+    "fontSize": "16px",
+    "iconWidth": "24px",
+    "spacing": "5px",
+    "list": [
+      {
+        "pagePath": "pages/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/record",
+        "text": "记账"
+      },
+      {
+        "pagePath": "pages/statistics",
+        "text": "统计"
+      },
+      {
+        "pagePath": "pages/settings",
+        "text": "设置"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "Neo-Finance",
+    "navigationBarBackgroundColor": "#1a1a2e",
+    "backgroundColor": "#0f0f1e"
+  }
+}
