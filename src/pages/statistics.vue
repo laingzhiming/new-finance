@@ -163,11 +163,11 @@ const initTrendChart = () => {
       const option = {
         backgroundColor: 'transparent',
         grid: {
-          left: 40,
-          right: 20,
-          top: 20,
-          bottom: 30,
-          containLabel: false
+          left: 10,
+          right: 10,
+          top: 30,
+          bottom: 10,
+          containLabel: true
         },
         xAxis: {
           type: 'category',
@@ -279,7 +279,7 @@ const initPieChart = () => {
       const dpr = uni.getSystemInfoSync().pixelRatio || 1
       canvas.width = res[0].width * dpr
       canvas.height = res[0].height * dpr
-      
+
       const chart = echarts.init(canvas, null, {
         width: res[0].width,
         height: res[0].height,
@@ -300,18 +300,25 @@ const initPieChart = () => {
         series: [
           {
             type: 'pie',
-            radius: ['25%', '45%'],
-            center: ['50%', '50%'],
+            radius: ['40%', '60%'],
+            center: ['50%', '50%'], // 确保居中
             data,
+            avoidLabelOverlap: true, // 防止标签重叠
             label: {
               show: true,
               color: '#F8F9FA',
-              fontSize: 11,
+              fontSize: 12,
               formatter: '{b}\n{d}%',
-              position: 'inside'
+              position: 'outside', // 文字移到外部
+              lineHeight: 16
             },
             labelLine: {
-              show: false
+              show: true,
+              length: 15,
+              length2: 10,
+              lineStyle: {
+                color: 'rgba(255, 255, 255, 0.3)'
+              }
             },
             emphasis: {
               itemStyle: {
