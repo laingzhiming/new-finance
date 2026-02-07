@@ -33,80 +33,158 @@
     <view class="chart-section glass-card slide-in-up">
       <text class="section-title">支出趋势</text>
       <view class="chart-container">
-        <canvas type="2d" id="trendChart" class="chart-canvas"></canvas>
+        <canvas type="2d" canvas-id="trendChart" id="trendChart" class="chart-canvas"></canvas>
       </view>
     </view>
 
     <!-- 分类占比 -->
     <view class="chart-section glass-card slide-in-up">
-      <text class="section-title">分类占比</text>
+      <text class="section-title">支出分类占比</text>
       <view class="chart-container">
-        <canvas type="2d" id="pieChart" class="chart-canvas"></canvas>
+        <canvas type="2d" canvas-id="pieChart" id="pieChart" class="chart-canvas"></canvas>
       </view>
     </view>
 
-    <!-- 分类明细 -->
-    <view class="category-detail glass-card slide-in-up">
-      <text class="section-title">分类明细</text>
-      <view v-for="(item, index) in categoryDetails" :key="index" class="detail-item">
-        <view class="detail-left">
-          <text class="detail-icon">{{ item.icon }}</text>
-          <text class="detail-label">{{ item.label }}</text>
+    <!-- 分类统计表 -->
+    <view class="category-stats glass-card slide-in-up">
+      <text class="section-title">分类统计</text>
+      <view class="tabs">
+        <view
+          class="tab-btn"
+          :class="{ active: statsTab === 'expense' }"
+          @tap="statsTab = 'expense'"
+        >
+          <text>支出</text>
         </view>
-        <view class="detail-right">
-          <text class="detail-amount">¥{{ item.amount.toFixed(2) }}</text>
-          <text class="detail-percentage">{{ item.percentage }}%</text>
+        <view
+          class="tab-btn"
+          :class="{ active: statsTab === 'income' }"
+          @tap="statsTab = 'income'"
+        >
+          <text>收入</text>
         </view>
       </view>
+      <view v-for="(item, index) in statsData" :key="index" class="stat-item">
+        <view class="stat-left">
+          <text class="stat-icon">{{ item.icon }}</text>
+          <view class="stat-info">
+            <text class="stat-label">{{ item.label }}</text>
+            <text class="stat-percentage">{{ item.percentage }}%</text>
+          </view>
+        </view>
+        <view class="stat-bar-container">
+          <view class="stat-bar">
+            <view
+              class="stat-bar-fill"
+              :style="{ width: item.percentage + '%', background: item.color }"
+            ></view>
+          </view>
+        </view>
+        <text class="stat-amount">¥{{ item.amount.toFixed(2) }}</text>
+      </view>
     </view>
+    <AppActionSheet
+      v-model="showMonthSheet"
+      title="选择月份"
+      :options="monthOptions"
+      @select="handleMonthSelect"
+    />
   </view>
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, getCurrentInstance, watch, nextTick } from 'vue'
 import type { StatisticsData } from '@/types'
-import { CategoryConfigMap, BillCategory } from '@/types'
+import { CategoryConfigMap, BillCategory, BillType } from '@/types'
 import { useBillStore } from '@/stores/bill'
-import * as echarts from 'echarts/core'
-import { CanvasRenderer } from 'echarts/renderers'
-import { LineChart, PieChart } from 'echarts/charts'
-import {
-  TitleComponent,
-  TooltipComponent,
-  GridComponent,
-  LegendComponent
-} from 'echarts/components'
-
-// 注册 ECharts 组件
-echarts.use([
-  CanvasRenderer,
-  LineChart,
-  PieChart,
-  TitleComponent,
-  TooltipComponent,
-  GridComponent,
-  LegendComponent
-])
+import uCharts from '@qiun/ucharts'
+import AppActionSheet from '@/components/AppActionSheet.vue'
 
 const billStore = useBillStore()
+const instance = getCurrentInstance()
+const instanceProxy = instance?.proxy ?? undefined
 
-// 当前月份
-const currentMonth = ref<string>('')
+const statsTab = ref<'expense' | 'income'>('expense')
+
+const getYearMonth = (date: Date) => {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+const formatYearMonthLabel = (value: string) => {
+  const [year, month] = value.split('-')
+  return `${year}年${Number(month)}月`
+}
+
+const selectedMonth = ref<string>(getYearMonth(new Date()))
+
+// 当前月份显示
+const currentMonth = computed(() => formatYearMonthLabel(selectedMonth.value))
+
+const buildStatisticsForMonth = (yearMonth: string): StatisticsData => {
+  const [yearStr, monthStr] = yearMonth.split('-')
+  const year = Number(yearStr)
+  const month = Number(monthStr) - 1
+
+  const monthlyBills = billStore.bills.filter(bill => {
+    const billDate = new Date(bill.date)
+    return billDate.getFullYear() === year && billDate.getMonth() === month
+  })
+
+  let totalIncome = 0
+  let totalExpense = 0
+  const categoryExpense: Record<string, number> = {}
+  const categoryIncome: Record<string, number> = {}
+
+  monthlyBills.forEach(bill => {
+    if (bill.type === BillType.Income) {
+      totalIncome += bill.amount
+      categoryIncome[bill.category] = (categoryIncome[bill.category] || 0) + bill.amount
+    } else {
+      totalExpense += bill.amount
+      categoryExpense[bill.category] = (categoryExpense[bill.category] || 0) + bill.amount
+    }
+  })
+
+  const dailyMap = new Map<string, { expense: number; income: number }>()
+  monthlyBills.forEach(bill => {
+    const existing = dailyMap.get(bill.date) || { expense: 0, income: 0 }
+    if (bill.type === BillType.Income) {
+      existing.income += bill.amount
+    } else {
+      existing.expense += bill.amount
+    }
+    dailyMap.set(bill.date, existing)
+  })
+
+  const dailyData = Array.from(dailyMap.entries())
+    .map(([date, data]) => ({ date, ...data }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+
+  return {
+    totalIncome,
+    totalExpense,
+    balance: totalIncome - totalExpense,
+    categoryExpense: categoryExpense as Record<BillCategory, number>,
+    categoryIncome: categoryIncome as Record<BillCategory, number>,
+    dailyData
+  }
+}
 
 // 统计数据
-const statistics = computed<StatisticsData>(() => billStore.statistics)
+const statistics = computed<StatisticsData>(() => buildStatisticsForMonth(selectedMonth.value))
 
 // 余额样式类
 const balanceClass = computed(() => {
   return statistics.value.balance >= 0 ? 'income' : 'expense'
 })
 
-// 分类明细
-const categoryDetails = computed(() => {
-  const categoryExpense = statistics.value.categoryExpense
-  const total = statistics.value.totalExpense
+// 分类统计（支持支出和收入切换）
+const statsData = computed(() => {
+  const categoryData =
+    statsTab.value === 'expense' ? statistics.value.categoryExpense : statistics.value.categoryIncome
+  const total = statsTab.value === 'expense' ? statistics.value.totalExpense : statistics.value.totalIncome
 
-  return Object.entries(categoryExpense)
+  return Object.entries(categoryData)
     .filter(([_, amount]) => amount > 0)
     .map(([category, amount]) => ({
       category: category as BillCategory,
@@ -117,257 +195,230 @@ const categoryDetails = computed(() => {
     .sort((a, b) => b.amount - a.amount)
 })
 
+const getRecentMonths = (count: number) => {
+  const list: { label: string; value: string }[] = []
+  const now = new Date()
+  for (let i = 0; i < count; i += 1) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const value = getYearMonth(date)
+    list.push({ label: formatYearMonthLabel(value), value })
+  }
+  return list
+}
+
 // 显示日期选择器
+const showMonthSheet = ref(false)
+
+const monthOptions = computed(() => getRecentMonths(12))
+
+const handleMonthSelect = (option: { label: string; value?: string }) => {
+  if (option.value) {
+    selectedMonth.value = option.value
+  }
+}
+
 const showDatePicker = () => {
-  // TODO: 实现日期选择器
-  uni.showToast({
-    title: '日期选择功能开发中',
-    icon: 'none'
+  showMonthSheet.value = true
+}
+
+const trendChart = ref<unknown>(null)
+const pieChart = ref<unknown>(null)
+
+const getCanvasSize = (canvasId: string, callback: (width: number, height: number) => void) => {
+  if (!instanceProxy) return
+  const query = uni.createSelectorQuery().in(instanceProxy)
+  query
+    .select(`#${canvasId}`)
+    .fields({ size: true }, () => {})
+    .exec(res => {
+      if (!res || !res[0]) {
+        console.warn(`Canvas ${canvasId} not found`)
+        return
+      }
+      let { width, height } = res[0]
+      if (!width || !height) {
+        // 备用方案：使用窗口宽度
+        const systemInfo = uni.getSystemInfoSync()
+        width = systemInfo.windowWidth - 32 // 减去 padding
+        height = canvasId === 'trendChart' ? 280 : 280
+      }
+      callback(width, height)
+    })
+}
+
+const buildTrendChartData = () => {
+  const dailyData = statistics.value.dailyData.slice(-7)
+  const categories = dailyData.map(item => {
+    const date = new Date(item.date)
+    return `${date.getMonth() + 1}-${date.getDate()}`
   })
+  const expenses = dailyData.map(item => item.expense)
+  const incomes = dailyData.map(item => item.income)
+
+  return {
+    categories,
+    series: [
+      { name: '支出', data: expenses, color: '#EF4444' },
+      { name: '收入', data: incomes, color: '#10B981' }
+    ]
+  }
+}
+
+const buildPieChartData = () => {
+  const categoryExpense = statistics.value.categoryExpense
+  const total = statistics.value.totalExpense
+
+  const categoryList = Object.entries(categoryExpense)
+    .filter(([_, amount]) => amount > 0)
+    .map(([category, amount]) => ({
+      category: category as BillCategory,
+      amount,
+      ...CategoryConfigMap[category as BillCategory]
+    }))
+    .sort((a, b) => b.amount - a.amount)
+
+  const series = categoryList.map(item => ({
+    name: item.label,
+    data: Number(item.amount.toFixed(2)),
+    color: item.color
+  }))
+
+  if (series.length === 0) {
+    return {
+      series: [{ name: '暂无数据', data: 1, color: '#334155' }],
+      hasData: false
+    }
+  }
+
+  return { series, hasData: true }
 }
 
 // 初始化趋势图表
 const initTrendChart = () => {
-  const query = uni.createSelectorQuery()
-  query
-    .select('#trendChart')
-    .fields({ node: true, size: true }, () => {})
-    .exec(res => {
-      if (!res || !res[0]) return
-
-      const canvas = res[0].node
-
-      // 设置 canvas 尺寸
-      const dpr = uni.getSystemInfoSync().pixelRatio || 1
-      canvas.width = res[0].width * dpr
-      canvas.height = res[0].height * dpr
-
-      // 初始化 ECharts
-      const chart = echarts.init(canvas, null, {
-        width: res[0].width,
-        height: res[0].height,
-        devicePixelRatio: dpr
-      })
-
-      // 准备数据
-      const dailyData = statistics.value.dailyData.slice(-7) // 最近7天
-      const dates = dailyData.map(item => {
-        const date = new Date(item.date)
-        return `${date.getMonth() + 1}/${date.getDate()}`
-      })
-      const expenses = dailyData.map(item => item.expense)
-      const incomes = dailyData.map(item => item.income)
-
-      // 配置图表
-      const option = {
-        backgroundColor: 'transparent',
-        grid: {
-          left: 10,
-          right: 10,
-          top: 30,
-          bottom: 10,
-          containLabel: true
-        },
-        xAxis: {
-          type: 'category',
-          data: dates,
-          axisLine: {
-            lineStyle: {
-              color: 'rgba(255, 255, 255, 0.2)'
-            }
-          },
-          axisLabel: {
-            color: '#ADB5BD',
-            fontSize: 10
-          }
-        },
-        yAxis: {
-          type: 'value',
-          axisLine: {
-            show: false
-          },
-          axisTick: {
-            show: false
-          },
-          axisLabel: {
-            color: '#ADB5BD',
-            fontSize: 10
-          },
-          splitLine: {
-            lineStyle: {
-              color: 'rgba(255, 255, 255, 0.1)'
-            }
-          }
-        },
-        series: [
-          {
-            name: '支出',
-            type: 'line',
-            data: expenses,
-            smooth: true,
-            symbol: 'circle',
-            symbolSize: 6,
-            lineStyle: {
-              color: '#EF4444',
-              width: 3
-            },
-            itemStyle: {
-              color: '#EF4444'
-            },
-            areaStyle: {
-              color: {
-                type: 'linear',
-                x: 0,
-                y: 0,
-                x2: 0,
-                y2: 1,
-                colorStops: [
-                  { offset: 0, color: 'rgba(239, 68, 68, 0.3)' },
-                  { offset: 1, color: 'rgba(239, 68, 68, 0)' }
-                ]
-              }
-            }
-          },
-          {
-            name: '收入',
-            type: 'line',
-            data: incomes,
-            smooth: true,
-            symbol: 'circle',
-            symbolSize: 6,
-            lineStyle: {
-              color: '#10B981',
-              width: 3
-            },
-            itemStyle: {
-              color: '#10B981'
-            },
-            areaStyle: {
-              color: {
-                type: 'linear',
-                x: 0,
-                y: 0,
-                x2: 0,
-                y2: 1,
-                colorStops: [
-                  { offset: 0, color: 'rgba(16, 185, 129, 0.3)' },
-                  { offset: 1, color: 'rgba(16, 185, 129, 0)' }
-                ]
-              }
-            }
-          }
-        ]
-      }
-
-      chart.setOption(option)
-    })
-}
-
-// 初始化饼图
-const initPieChart = () => {
-  const query = uni.createSelectorQuery()
-  query
-    .select('#pieChart')
-    .fields({ node: true, size: true }, () => {})
-    .exec(res => {
-      if (!res || !res[0]) return
-
-      const canvas = res[0].node
-
-      const dpr = uni.getSystemInfoSync().pixelRatio || 1
-      canvas.width = res[0].width * dpr
-      canvas.height = res[0].height * dpr
-
-      const chart = echarts.init(canvas, null, {
-        width: res[0].width,
-        height: res[0].height,
-        devicePixelRatio: dpr
-      })
-
-      // 准备数据
-      const data = categoryDetails.value.map(item => ({
-        name: item.label,
-        value: item.amount,
-        itemStyle: {
-          color: item.color
+  const { categories, series } = buildTrendChartData()
+  getCanvasSize('trendChart', (width, height) => {
+    const context = uni.createCanvasContext('trendChart', instanceProxy)
+    const pixelRatio = uni.getSystemInfoSync().pixelRatio || 1
+    trendChart.value = new uCharts({
+      type: 'line',
+      canvasId: 'trendChart',
+      context,
+      width,
+      height,
+      categories,
+      series,
+      legend: {
+        show: true,
+        position: 'bottom',
+        float: 'center',
+        fontSize: 10
+      },
+      xAxis: {
+        disableGrid: true,
+        axisLine: true,
+        fontSize: 10,
+      },
+      yAxis: {
+        gridType: 'dash',
+        fontSize: 10
+      },
+      dataLabel: false,
+      dataPointShape: false,
+      extra: {
+        line: {
+          type: 'curve'
         }
-      }))
-
-      const option = {
-        backgroundColor: 'transparent',
-        series: [
-          {
-            type: 'pie',
-            radius: ['40%', '60%'],
-            center: ['50%', '50%'], // 确保居中
-            data,
-            avoidLabelOverlap: true, // 防止标签重叠
-            label: {
-              show: true,
-              color: '#F8F9FA',
-              fontSize: 12,
-              formatter: '{b}\n{d}%',
-              position: 'outside', // 文字移到外部
-              lineHeight: 16
-            },
-            labelLine: {
-              show: true,
-              length: 15,
-              length2: 10,
-              lineStyle: {
-                color: 'rgba(255, 255, 255, 0.3)'
-              }
-            },
-            emphasis: {
-              itemStyle: {
-                shadowBlur: 10,
-                shadowOffsetX: 0,
-                shadowColor: 'rgba(0, 0, 0, 0.5)'
-              }
-            }
-          }
-        ]
-      }
-
-      chart.setOption(option)
+      },
+      animation: true,
+      background: 'rgba(0,0,0,0)',
+      pixelRatio,
+      clickable: true
     })
+  })
 }
 
-// 更新当前月份显示
-const updateCurrentMonth = () => {
-  const now = new Date()
-  currentMonth.value = `${now.getFullYear()}年${now.getMonth() + 1}月`
+// 初始化圆环图
+const initPieChart = () => {
+  const { series, hasData } = buildPieChartData()
+  getCanvasSize('pieChart', (width, height) => {
+    const context = uni.createCanvasContext('pieChart', instanceProxy)
+    const pixelRatio = uni.getSystemInfoSync().pixelRatio || 1
+    pieChart.value = new uCharts({
+      type: 'ring',
+      canvasId: 'pieChart',
+      context,
+      width,
+      height,
+      series,
+      legend: {
+        show: hasData,
+        position: 'bottom',
+        float: 'center',
+        fontSize: 10
+      },
+      dataLabel: hasData,
+      padding: [0, 0, 0, 0],
+      extra: {
+        ring: {
+          activeRadius: 8
+        }
+      },
+      animation: true,
+      background: 'rgba(0,0,0,0)',
+      pixelRatio,
+      clickable: true
+    })
+  })
 }
+
+watch(
+  [selectedMonth, () => billStore.bills],
+  async () => {
+    await nextTick()
+    setTimeout(() => {
+      initTrendChart()
+      initPieChart()
+    }, 50)
+  },
+  { deep: true }
+)
 
 onMounted(() => {
-  updateCurrentMonth()
   billStore.loadBills()
 
-  // 延迟初始化图表，确保DOM渲染完成
   setTimeout(() => {
     initTrendChart()
     initPieChart()
-  }, 500)
+  }, 200)
+
+  // 监听屏幕方向改变
+  uni.onWindowResize(() => {
+    setTimeout(() => {
+      initTrendChart()
+      initPieChart()
+    }, 100)
+  })
 })
 </script>
 
 <style scoped>
 .statistics-container {
-  min-height: 100vh;
+  min-height: calc(100vh - 51px);
   background: var(--bg-primary);
+  padding-top: 32rpx;
 }
 
 /* 导航栏 */
 .custom-navbar {
-  padding: calc(var(--status-bar-height) + 12px) 20px 12px;
-  margin: 16px 16px 20px;
+  padding: calc(var(--status-bar-height) + 24rpx) 40rpx 24rpx;
+  margin: 0 32rpx 40rpx;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .navbar-title {
-  font-size: 20px;
+  font-size: 40rpx;
   font-weight: bold;
   color: var(--text-main);
 }
@@ -375,19 +426,19 @@ onMounted(() => {
 .date-selector {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 16rpx;
+  padding: 16rpx 24rpx;
   background: var(--bg-tertiary);
-  border-radius: 8px;
+  border-radius: 16rpx;
   cursor: pointer;
   color: var(--text-main);
-  font-size: 14px;
+  font-size: 28rpx;
 }
 
 /* 概览卡片 */
 .overview-card {
-  margin: 0 16px 24px;
-  padding: 24px;
+  margin: 0 32rpx 48rpx;
+  padding: 48rpx;
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -400,14 +451,14 @@ onMounted(() => {
 
 .overview-label {
   display: block;
-  font-size: 12px;
+  font-size: 24rpx;
   color: var(--text-secondary);
-  margin-bottom: 8px;
+  margin-bottom: 16rpx;
 }
 
 .overview-value {
   display: block;
-  font-size: 20px;
+  font-size: 40rpx;
   font-weight: 600;
 }
 
@@ -421,28 +472,29 @@ onMounted(() => {
 
 .overview-divider {
   width: 1px;
-  height: 40px;
+  height: 80rpx;
   background: var(--border-color);
 }
 
 /* 图表区域 */
 .chart-section {
-  margin: 0 16px 24px;
-  padding: 16px;
+  margin: 0 32rpx 48rpx;
+  padding: 32rpx;
 }
 
 .section-title {
   display: block;
-  font-size: 18px;
+  font-size: 36rpx;
   font-weight: 600;
   color: var(--text-main);
-  margin-bottom: 12px;
+  margin-bottom: 24rpx;
 }
 
 .chart-container {
   width: 100%;
-  height: 300px;
+  height: 560rpx;
   overflow: hidden;
+  position: relative;
 }
 
 .chart-canvas {
@@ -451,54 +503,99 @@ onMounted(() => {
   display: block;
 }
 
-/* 分类明细 */
-.category-detail {
-  margin: 0 16px 24px;
-  padding: 20px;
+/* 分类统计 */
+.category-stats {
+  margin: 0 32rpx 48rpx;
+  padding: 40rpx;
 }
 
-.detail-item {
+.tabs {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--border-color);
+  gap: 16rpx;
+  margin-bottom: 40rpx;
 }
 
-.detail-item:last-child {
-  border-bottom: none;
+.tab-btn {
+  flex: 1;
+  padding: 20rpx 24rpx;
+  background: var(--bg-tertiary);
+  border-radius: 24rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: var(--text-secondary);
+  border: 1px solid var(--glass-border);
+  transition: all var(--transition-fast);
+  cursor: pointer;
 }
 
-.detail-left {
+.tab-btn.active {
+  background: var(--gradient-primary);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.stat-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  padding: 28rpx 0;
+  gap: 24rpx;
 }
 
-.detail-icon {
-  font-size: 24px;
+.stat-left {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  width: 120rpx;
+  flex-shrink: 0;
 }
 
-.detail-label {
-  font-size: 14px;
-  color: var(--text-main);
+.stat-icon {
+  font-size: 48rpx;
+  flex-shrink: 0;
 }
 
-.detail-right {
+.stat-info {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+  gap: 4rpx;
 }
 
-.detail-amount {
-  font-size: 16px;
+.stat-label {
+  font-size: 24rpx;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.stat-percentage {
+  font-size: 20rpx;
+  color: var(--text-secondary);
+}
+
+.stat-bar-container {
+  flex: 1;
+  height: 24rpx;
+}
+
+.stat-bar {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-tertiary);
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+
+.stat-bar-fill {
+  height: 100%;
+  border-radius: 12rpx;
+  transition: width var(--transition-base);
+}
+
+.stat-amount {
+  font-size: 28rpx;
   font-weight: 600;
   color: var(--text-main);
-}
-
-.detail-percentage {
-  font-size: 12px;
-  color: var(--text-secondary);
+  width: 120rpx;
+  text-align: right;
+  flex-shrink: 0;
 }
 </style>

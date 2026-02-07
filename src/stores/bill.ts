@@ -4,11 +4,13 @@ import { BillType } from '@/types'
 
 interface BillState {
   bills: BillItem[]
+  draftType?: BillType
 }
 
 export const useBillStore = defineStore('bill', {
   state: (): BillState => ({
-    bills: []
+    bills: [],
+    draftType: undefined
   }),
 
   getters: {
@@ -68,6 +70,10 @@ export const useBillStore = defineStore('bill', {
   },
 
   actions: {
+    // 设置待记账类型（用于TabBar跳转）
+    setDraftType(type: BillType) {
+      this.draftType = type
+    },
     // 添加账单
     addBill(bill: BillItem) {
       this.bills.unshift(bill)

@@ -6,7 +6,7 @@ declare module '*.vue' {
   export default component
 }
 
-declare module 'echarts' {
-  import * as echarts from 'echarts/core'
-  export = echarts
+declare module '@qiun/ucharts' {
+  const uCharts: any
+  export default uCharts
 }

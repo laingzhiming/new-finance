@@ -11,7 +11,7 @@
           placeholder-class="placeholder"
           @input="handleSearch"
         />
-        <view v-if="searchKeyword" class="clear-btn" @click="clearSearch">
+        <view v-if="searchKeyword" class="clear-btn" @tap="clearSearch">
           <text>✕</text>
         </view>
       </view>
@@ -19,7 +19,7 @@
         <view
           class="filter-btn"
           :class="{ active: activeFilter === 'all' }"
-          @click="setFilter('all')"
+          @tap="setFilter('all')"
         >
           <text>全部</text>
         </view>
@@ -28,7 +28,7 @@
           :key="category"
           class="filter-btn"
           :class="{ active: activeFilter === category }"
-          @click="setFilter(category)"
+          @tap="setFilter(category)"
         >
           <text class="filter-icon">{{ config.icon }}</text>
           <text class="filter-label">{{ config.label }}</text>
@@ -46,31 +46,45 @@
         <text class="amount number-animate">{{ animatedBalance }}</text>
       </view>
       <view class="balance-footer">
-        <view class="balance-item" @click="goToStatistics">
+        <view class="balance-item">
           <text class="item-label">本月收入</text>
           <text class="item-value income">+{{ statistics.totalIncome.toFixed(2) }}</text>
         </view>
         <view class="balance-divider"></view>
-        <view class="balance-item" @click="goToStatistics">
+        <view class="balance-item">
           <text class="item-label">本月支出</text>
           <text class="item-value expense">-{{ statistics.totalExpense.toFixed(2) }}</text>
         </view>
       </view>
     </view>
 
-    <!-- 快捷操作 -->
-    <view class="quick-actions slide-in-up">
-      <view class="action-btn glass-card" @click="addExpense">
-        <text class="action-icon">💸</text>
-        <text class="action-text">支出</text>
+    <!-- 最近账单 / 筛选结果 -->
+    <view class="recent-bills glass-card slide-in-up">
+      <text class="section-title">{{
+        activeFilter === 'all' && !searchKeyword ? '最近账单' : '筛选结果'
+      }}</text>
+      <view
+        v-for="bill in displayBills"
+        :key="bill.id"
+        class="bill-item"
+        @tap="viewBillDetail(bill)"
+      >
+        <view class="bill-left">
+          <text class="bill-icon">{{ getCategoryIcon(bill.category) }}</text>
+          <view class="bill-info">
+            <text class="bill-category">{{ getCategoryLabel(bill.category) }}</text>
+            <text class="bill-remark">{{ bill.remark || '无备注' }}</text>
+          </view>
+        </view>
+        <view class="bill-right">
+          <text class="bill-amount" :class="bill.type === 'expense' ? 'expense' : 'income'">
+            {{ bill.type === 'expense' ? '-' : '+' }}{{ bill.amount.toFixed(2) }}
+          </text>
+          <text class="bill-date">{{ formatDate(bill.date) }}</text>
+        </view>
       </view>
-      <view class="action-btn glass-card" @click="addIncome">
-        <text class="action-icon">💰</text>
-        <text class="action-text">收入</text>
-      </view>
-      <view class="action-btn glass-card" @click="goToStatistics">
-        <text class="action-icon">📊</text>
-        <text class="action-text">统计</text>
+      <view v-if="displayBills.length === 0" class="empty-state">
+        <text>暂无符合条件的账单</text>
       </view>
     </view>
 
@@ -93,38 +107,13 @@
         </view>
       </view>
     </view>
-
-    <!-- 最近账单 -->
-    <view class="recent-bills glass-card slide-in-up">
-      <text class="section-title">最近账单</text>
-      <view
-        v-for="bill in recentBills"
-        :key="bill.id"
-        class="bill-item"
-        @click="viewBillDetail(bill)"
-      >
-        <view class="bill-left">
-          <text class="bill-icon">{{ getCategoryIcon(bill.category) }}</text>
-          <view class="bill-info">
-            <text class="bill-category">{{ getCategoryLabel(bill.category) }}</text>
-            <text class="bill-remark">{{ bill.remark || '无备注' }}</text>
-          </view>
-        </view>
-        <view class="bill-right">
-          <text class="bill-amount" :class="bill.type === 'expense' ? 'expense' : 'income'">
-            {{ bill.type === 'expense' ? '-' : '+' }}{{ bill.amount.toFixed(2) }}
-          </text>
-          <text class="bill-date">{{ formatDate(bill.date) }}</text>
-        </view>
-      </view>
-    </view>
   </view>
 </template>
 
 <script lang="ts" setup>
 import { computed, onMounted, ref } from 'vue'
 import type { BillItem, StatisticsData } from '@/types'
-import { BillCategory, CategoryConfigMap } from '@/types'
+import { BillCategory, CategoryConfigMap, BillType } from '@/types'
 import { useBillStore } from '@/stores/bill'
 import { useNumberAnimation } from '@/composables/useNumberAnimation'
 
@@ -143,28 +132,32 @@ const { animatedValue: animatedBalance } = useNumberAnimation(
   { duration: 1000, decimals: 2 }
 )
 
-// 最近账单
-const recentBills = computed<BillItem[]>(() => {
-  let filtered = billStore.bills
+const filteredBills = computed<BillItem[]>(() => {
+  let filtered = [...billStore.bills]
 
-  // 按分类筛选
+  filtered.sort((a, b) => b.timestamp - a.timestamp)
+
   if (activeFilter.value !== 'all') {
     filtered = filtered.filter(bill => bill.category === activeFilter.value)
   }
 
-  // 按搜索关键词筛选
   if (searchKeyword.value.trim()) {
     const keyword = searchKeyword.value.toLowerCase()
-    filtered = filtered.filter(
-      bill =>
-        bill.remark.toLowerCase().includes(keyword) ||
-        getCategoryLabel(bill.category).toLowerCase().includes(keyword) ||
+    filtered = filtered.filter(bill => {
+      const remark = bill.remark ? bill.remark.toLowerCase() : ''
+      const categoryLabel = getCategoryLabel(bill.category).toLowerCase()
+      return (
+        remark.includes(keyword) ||
+        categoryLabel.includes(keyword) ||
         bill.amount.toString().includes(keyword)
-    )
+      )
+    })
   }
 
-  return filtered.slice(0, 5)
+  return filtered
 })
+
+const displayBills = computed<BillItem[]>(() => filteredBills.value.slice(0, 5))
 
 // 分类支出 Top 3
 const topCategories = computed(() => {
@@ -208,29 +201,11 @@ const formatDate = (dateStr: string): string => {
   }
 }
 
-// 跳转到记账页面
-const addExpense = () => {
-  uni.navigateTo({
-    url: '/pages/record?type=expense'
-  })
-}
-
-const addIncome = () => {
-  uni.navigateTo({
-    url: '/pages/record?type=income'
-  })
-}
-
-// 跳转到统计页面
-const goToStatistics = () => {
-  uni.switchTab({
-    url: '/pages/statistics'
-  })
-}
-
 // 搜索处理
-const handleSearch = () => {
-  // 实时搜索
+const handleSearch = (event: Event) => {
+  const target = event.target as HTMLInputElement | null
+  const detailValue = (event as { detail?: { value?: string } }).detail?.value
+  searchKeyword.value = detailValue ?? target?.value ?? ''
 }
 
 // 清空搜索
@@ -245,8 +220,9 @@ const setFilter = (filter: string) => {
 
 // 查看账单详情
 const viewBillDetail = (bill: BillItem) => {
-  console.log('查看账单详情:', bill)
-  // TODO: 实现账单详情页
+  uni.navigateTo({
+    url: `/pages/bill-detail?id=${bill.id}`
+  })
 }
 
 onMounted(() => {
@@ -257,13 +233,13 @@ onMounted(() => {
 
 <style scoped>
 .home-container {
-  min-height: 100vh;
+  min-height: calc(100vh - 51px);
   background: var(--bg-primary);
 }
 
 /* 搜索筛选栏 */
 .search-filter-bar {
-  padding: calc(var(--status-bar-height) + 8px) 0 12px;
+  padding: calc(var(--status-bar-height) + 16rpx) 0 24rpx;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -272,9 +248,9 @@ onMounted(() => {
 .search-box {
   display: flex;
   align-items: center;
-  border-radius: 16px;
-  padding: 12px 14px;
-  margin: 0 16px 10px;
+  border-radius: 32rpx;
+  padding: 24rpx 28rpx;
+  margin: 0 32rpx 20rpx;
   position: relative;
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
@@ -282,8 +258,8 @@ onMounted(() => {
 }
 
 .search-icon {
-  font-size: 16px;
-  margin-right: 10px;
+  font-size: 32rpx;
+  margin-right: 20rpx;
   color: var(--text-secondary);
   flex-shrink: 0;
 }
@@ -293,8 +269,8 @@ onMounted(() => {
   background: transparent;
   border: none;
   color: var(--text-main);
-  font-size: 14px;
-  padding: 4px 0;
+  font-size: 28rpx;
+  padding: 8rpx 0;
 }
 
 .search-input::placeholder {
@@ -306,15 +282,15 @@ onMounted(() => {
 }
 
 .clear-btn {
-  width: 20px;
-  height: 20px;
+  width: 40rpx;
+  height: 40rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--bg-tertiary);
   border-radius: 50%;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 24rpx;
   color: var(--text-secondary);
   transition: all var(--transition-fast);
   flex-shrink: 0;
@@ -329,11 +305,11 @@ onMounted(() => {
 /* 筛选按钮 */
 .filter-scroll {
   display: flex;
-  gap: 8px;
+  gap: 16rpx;
   overflow-x: auto;
-  padding: 10px 12px;
-  margin: 0 16px;
-  border-radius: 16px;
+  padding: 20rpx 24rpx;
+  margin: 0 32rpx;
+  border-radius: 32rpx;
   scroll-behavior: smooth;
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
@@ -341,11 +317,11 @@ onMounted(() => {
 }
 
 .filter-btn {
-  min-width: 64px;
-  padding: 8px 10px;
+  width: 149rpx;
+  padding: 16rpx 20rpx;
   background: var(--bg-tertiary);
-  border-radius: 14px;
-  font-size: 12px;
+  border-radius: 28rpx;
+  font-size: 24rpx;
   color: var(--text-secondary);
   white-space: nowrap;
   cursor: pointer;
@@ -354,16 +330,16 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 4rpx;
   flex-shrink: 0;
   flex-direction: column;
   &:first-child {
-    font-size: 16px;
+    font-size: 32rpx;
   }
 }
 
 .filter-label {
-  font-size: 12px;
+  font-size: 24rpx;
   line-height: 1;
 }
 
@@ -375,11 +351,11 @@ onMounted(() => {
   background: var(--gradient-primary);
   color: white;
   border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 12rpx 32rpx rgba(99, 102, 241, 0.35);
 }
 
 .filter-icon {
-  font-size: 22px;
+  font-size: 44rpx;
 }
 
 .settings-btn {
@@ -388,8 +364,8 @@ onMounted(() => {
 
 /* 余额卡片 */
 .balance-card {
-  margin: 0 16px 24px;
-  padding: 32px 24px;
+  margin: 0 32rpx 48rpx;
+  padding: 64rpx 48rpx;
   position: relative;
   overflow: hidden;
 }
@@ -418,32 +394,32 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 24rpx;
   position: relative;
   z-index: 1;
 }
 
 .balance-label {
-  font-size: 14px;
+  font-size: 28rpx;
   color: var(--text-secondary);
 }
 
 .currency {
-  font-size: 20px;
+  font-size: 40rpx;
   color: var(--text-secondary);
 }
 
 .balance-amount {
-  margin-bottom: 24px;
+  margin-bottom: 48rpx;
   position: relative;
   z-index: 1;
 }
 
 .amount {
-  font-size: 48px;
+  font-size: 96rpx;
   font-weight: bold;
   color: var(--text-main);
-  text-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+  text-shadow: 0 0 40rpx rgba(99, 102, 241, 0.3);
 }
 
 .balance-footer {
@@ -461,14 +437,14 @@ onMounted(() => {
 
 .item-label {
   display: block;
-  font-size: 12px;
+  font-size: 24rpx;
   color: var(--text-secondary);
-  margin-bottom: 8px;
+  margin-bottom: 16rpx;
 }
 
 .item-value {
   display: block;
-  font-size: 18px;
+  font-size: 36rpx;
   font-weight: 600;
 }
 
@@ -482,59 +458,26 @@ onMounted(() => {
 
 .balance-divider {
   width: 1px;
-  height: 40px;
+  height: 80rpx;
   background: var(--border-color);
-}
-
-/* 快捷操作 */
-.quick-actions {
-  display: flex;
-  justify-content: space-between;
-  margin: 0 16px 24px;
-  gap: 12px;
-}
-
-.action-btn {
-  flex: 1;
-  padding: 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: all var(--transition-base);
-}
-
-.action-btn:active {
-  transform: scale(0.95);
-}
-
-.action-icon {
-  display: block;
-  font-size: 32px;
-  margin-bottom: 8px;
-}
-
-.action-text {
-  display: block;
-  font-size: 14px;
-  color: var(--text-main);
-  font-weight: 500;
 }
 
 /* 分类进度 */
 .category-progress {
-  margin: 0 16px 24px;
-  padding: 20px;
+  margin: 0 32rpx 48rpx;
+  padding: 40rpx;
 }
 
 .section-title {
   display: block;
-  font-size: 18px;
+  font-size: 36rpx;
   font-weight: 600;
   color: var(--text-main);
-  margin-bottom: 20px;
+  margin-bottom: 40rpx;
 }
 
 .progress-item {
-  margin-bottom: 20px;
+  margin-bottom: 40rpx;
 }
 
 .progress-item:last-child {
@@ -545,41 +488,41 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 16rpx;
 }
 
 .category-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16rpx;
 }
 
 .category-icon {
-  font-size: 20px;
+  font-size: 40rpx;
 }
 
 .category-name {
-  font-size: 14px;
+  font-size: 28rpx;
   color: var(--text-main);
 }
 
 .category-amount {
-  font-size: 14px;
+  font-size: 28rpx;
   font-weight: 600;
   color: var(--text-main);
 }
 
 /* 最近账单 */
 .recent-bills {
-  margin: 0 16px 24px;
-  padding: 20px;
+  margin: 0 32rpx 48rpx;
+  padding: 40rpx;
 }
 
 .bill-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 0;
+  padding: 32rpx 0;
   border-bottom: 1px solid var(--border-color);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -591,36 +534,36 @@ onMounted(() => {
 
 .bill-item:active {
   background: var(--glass-bg);
-  margin: 0 -12px;
-  padding-left: 12px;
-  padding-right: 12px;
-  border-radius: 8px;
+  margin: 0 -24rpx;
+  padding-left: 24rpx;
+  padding-right: 24rpx;
+  border-radius: 16rpx;
 }
 
 .bill-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 24rpx;
 }
 
 .bill-icon {
-  font-size: 28px;
+  font-size: 56rpx;
 }
 
 .bill-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8rpx;
 }
 
 .bill-category {
-  font-size: 14px;
+  font-size: 28rpx;
   color: var(--text-main);
   font-weight: 500;
 }
 
 .bill-remark {
-  font-size: 12px;
+  font-size: 24rpx;
   color: var(--text-secondary);
 }
 
@@ -628,11 +571,11 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 4px;
+  gap: 8rpx;
 }
 
 .bill-amount {
-  font-size: 16px;
+  font-size: 32rpx;
   font-weight: 600;
 }
 
@@ -645,7 +588,14 @@ onMounted(() => {
 }
 
 .bill-date {
-  font-size: 12px;
+  font-size: 24rpx;
   color: var(--text-secondary);
+}
+
+.empty-state {
+  padding: 40rpx 0 16rpx;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 24rpx;
 }
 </style>

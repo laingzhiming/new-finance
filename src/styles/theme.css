@@ -29,10 +29,10 @@
 
   /* 边框和阴影 */
   --border-color: rgba(255, 255, 255, 0.1);
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.3);
-  --shadow-glow: 0 0 15px rgba(99, 102, 241, 0.5);
+  --shadow-sm: 0 4rpx 8rpx rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 8rpx 12rpx rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 20rpx 50rpx rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 30rpx rgba(99, 102, 241, 0.5);
 
   /* 渐变 */
   --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
@@ -71,7 +71,7 @@
   --text-muted: #8b8b8b;
 
   --border-color: rgba(0, 240, 255, 0.3);
-  --shadow-glow: 0 0 20px rgba(0, 240, 255, 0.8);
+  --shadow-glow: 0 0 40rpx rgba(0, 240, 255, 0.8);
 
   --gradient-primary: linear-gradient(135deg, #00f0ff 0%, #ff00ff 100%);
   --gradient-secondary: linear-gradient(135deg, #ffff00 0%, #ff0055 100%);
@@ -99,10 +99,10 @@
   --text-muted: #94a3b8;
 
   --border-color: rgba(15, 23, 42, 0.08);
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
-  --shadow-glow: 0 0 15px rgba(79, 70, 229, 0.3);
+  --shadow-sm: 0 4rpx 8rpx rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 8rpx 12rpx rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 20rpx 50rpx rgba(0, 0, 0, 0.15);
+  --shadow-glow: 0 0 30rpx rgba(79, 70, 229, 0.3);
 
   --gradient-primary: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   --gradient-secondary: linear-gradient(135deg, #db2777 0%, #d97706 100%);
@@ -113,6 +113,23 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+html {
+  font-size: 14px;
+}
+
+/* 响应式字体大小 */
+@media (min-width: 768px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 1024px) {
+  html {
+    font-size: 16px;
+  }
 }
 
 body {
@@ -150,7 +167,7 @@ body {
     box-shadow: var(--shadow-glow);
   }
   50% {
-    box-shadow: 0 0 25px var(--primary-color);
+    box-shadow: 0 0 50rpx var(--primary-color);
   }
 }
 
@@ -161,8 +178,8 @@ body {
 
 /* 按钮样式 */
 .btn-primary {
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.75rem;
+  padding: 24rpx 48rpx;
+  border-radius: 24rpx;
   background: var(--gradient-primary);
   color: white;
   font-weight: 600;
@@ -183,7 +200,7 @@ body {
 /* 进度条 */
 .progress-bar {
   position: relative;
-  height: 8px;
+  height: 16rpx;
   background: var(--bg-tertiary);
   border-radius: 4px;
   overflow: hidden;
@@ -199,8 +216,8 @@ body {
 
 /* 卡片容器 */
 .card-container {
-  padding: 1.5rem;
-  margin: 1rem 0;
+  padding: 48rpx;
+  margin: 32rpx 0;
 }
 
 /* 数字滚动动画 */

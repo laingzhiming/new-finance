@@ -75,14 +75,33 @@
         <text class="app-desc">酷炫风多端费用统计系统</text>
       </view>
     </view>
+    <AppActionSheet
+      v-model="showCurrencySheet"
+      title="选择货币"
+      :options="currencyOptions"
+      @select="handleCurrencySelect"
+    />
+    <AppModal
+      v-model="showModal"
+      :title="modalTitle"
+      :content="modalContent"
+      :confirmText="modalConfirmText"
+      :cancelText="modalCancelText"
+      :showCancel="modalShowCancel"
+      :danger="modalDanger"
+      @confirm="handleModalConfirm"
+      @cancel="handleModalCancel"
+    />
   </view>
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Theme } from '@/types'
 import { useSettingsStore } from '@/stores/settings'
 import { useBillStore } from '@/stores/bill'
+import AppActionSheet from '@/components/AppActionSheet.vue'
+import AppModal from '@/components/AppModal.vue'
 
 const settingsStore = useSettingsStore()
 const billStore = useBillStore()
@@ -92,6 +111,46 @@ const currentTheme = computed(() => settingsStore.settings.theme)
 
 // 设置
 const settings = computed(() => settingsStore.settings)
+
+const showModal = ref(false)
+const modalTitle = ref('')
+const modalContent = ref('')
+const modalConfirmText = ref('确定')
+const modalCancelText = ref('取消')
+const modalShowCancel = ref(true)
+const modalDanger = ref(false)
+let modalConfirmHandler: (() => void) | null = null
+
+const openModal = (options: {
+  title: string
+  content: string
+  confirmText?: string
+  cancelText?: string
+  showCancel?: boolean
+  danger?: boolean
+  onConfirm?: () => void
+}) => {
+  modalTitle.value = options.title
+  modalContent.value = options.content
+  modalConfirmText.value = options.confirmText ?? '确定'
+  modalCancelText.value = options.cancelText ?? '取消'
+  modalShowCancel.value = options.showCancel ?? true
+  modalDanger.value = options.danger ?? false
+  modalConfirmHandler = options.onConfirm ?? null
+  showModal.value = true
+}
+
+const handleModalConfirm = () => {
+  const handler = modalConfirmHandler
+  modalConfirmHandler = null
+  showModal.value = false
+  handler?.()
+}
+
+const handleModalCancel = () => {
+  modalConfirmHandler = null
+  showModal.value = false
+}
 
 // 主题选项
 const themeOptions = [
@@ -125,15 +184,23 @@ const changeTheme = (theme: Theme) => {
   })
 }
 
+const showCurrencySheet = ref(false)
+const currencyOptions = [
+  { label: '¥ 人民币', value: '¥' },
+  { label: '$ 美元', value: '$' },
+  { label: '€ 欧元', value: '€' },
+  { label: '£ 英镑', value: '£' }
+]
+
 // 显示货币选择器
 const showCurrencyPicker = () => {
-  uni.showActionSheet({
-    itemList: ['¥ 人民币', '$ 美元', '€ 欧元', '£ 英镑'],
-    success: res => {
-      const currencies = ['¥', '$', '€', '£']
-      settingsStore.setCurrency(currencies[res.tapIndex])
-    }
-  })
+  showCurrencySheet.value = true
+}
+
+const handleCurrencySelect = (option: { value?: string }) => {
+  if (option.value) {
+    settingsStore.setCurrency(option.value)
+  }
 }
 
 // 切换通知
@@ -141,37 +208,103 @@ const toggleNotification = (e: any) => {
   settingsStore.setNotification(e.detail.value)
 }
 
+const buildExportPayload = () => {
+  return {
+    version: 1,
+    exportedAt: Date.now(),
+    bills: billStore.bills,
+    settings: settingsStore.settings
+  }
+}
+
 // 导出数据
 const exportData = () => {
+  const payload = buildExportPayload()
+  uni.setClipboardData({
+    data: JSON.stringify(payload),
+    success: () => {
+      openModal({
+        title: '导出成功',
+        content: '数据已复制到剪贴板，可保存到安全位置。',
+        showCancel: false,
+        confirmText: '知道了'
+      })
+    },
+    fail: () => {
+      uni.showToast({
+        title: '复制失败',
+        icon: 'none'
+      })
+    }
+  })
+}
+
+const applyImportedData = (payload: any) => {
+  if (!payload || !Array.isArray(payload.bills)) {
+    uni.showToast({
+      title: '导入数据格式不正确',
+      icon: 'none'
+    })
+    return
+  }
+
+  billStore.bills = payload.bills
+  billStore.saveBills()
+
+  if (payload.settings) {
+    settingsStore.replaceSettings(payload.settings)
+  }
+
   uni.showToast({
-    title: '导出功能开发中',
-    icon: 'none'
+    title: '导入成功',
+    icon: 'success'
   })
 }
 
 // 导入数据
 const importData = () => {
-  uni.showToast({
-    title: '导入功能开发中',
-    icon: 'none'
+  uni.getClipboardData({
+    success: res => {
+      let payload: any
+      try {
+        payload = JSON.parse(res.data)
+      } catch (e) {
+        uni.showToast({
+          title: '剪贴板内容不是有效JSON',
+          icon: 'none'
+        })
+        return
+      }
+
+      openModal({
+        title: '确认导入',
+        content: '导入将覆盖当前账单数据，是否继续？',
+        confirmText: '继续',
+        onConfirm: () => applyImportedData(payload)
+      })
+    },
+    fail: () => {
+      uni.showToast({
+        title: '读取剪贴板失败',
+        icon: 'none'
+      })
+    }
   })
 }
 
 // 清空数据
 const clearData = () => {
-  uni.showModal({
+  openModal({
     title: '确认清空',
     content: '此操作将删除所有账单数据，且无法恢复。确定继续吗？',
     confirmText: '确定',
-    confirmColor: '#EF4444',
-    success: res => {
-      if (res.confirm) {
-        billStore.clearAllBills()
-        uni.showToast({
-          title: '数据已清空',
-          icon: 'success'
-        })
-      }
+    danger: true,
+    onConfirm: () => {
+      billStore.clearAllBills()
+      uni.showToast({
+        title: '数据已清空',
+        icon: 'success'
+      })
     }
   })
 }
@@ -179,41 +312,42 @@ const clearData = () => {
 
 <style scoped>
 .settings-container {
-  min-height: 100vh;
+  min-height: calc(100vh - 51px);
   background: var(--bg-primary);
+  padding-top: 32rpx;
 }
 
 /* 导航栏 */
 .custom-navbar {
-  padding: calc(var(--status-bar-height) + 12px) 20px 12px;
-  margin: 16px 16px 20px;
+  padding: calc(var(--status-bar-height) + 24rpx) 40rpx 24rpx;
+  margin: 0 32rpx 40rpx;
 }
 
 .navbar-title {
-  font-size: 20px;
+  font-size: 40rpx;
   font-weight: bold;
   color: var(--text-main);
 }
 
 /* 设置区块 */
 .settings-section {
-  margin: 0 16px 20px;
-  padding: 20px;
+  margin: 0 32rpx 40rpx;
+  padding: 40rpx;
 }
 
 .section-title {
   display: block;
-  font-size: 16px;
+  font-size: 32rpx;
   font-weight: 600;
   color: var(--text-main);
-  margin-bottom: 16px;
+  margin-bottom: 32rpx;
 }
 
 /* 主题选项 */
 .theme-options {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 24rpx;
 }
 
 .theme-option {
@@ -230,13 +364,13 @@ const clearData = () => {
 }
 
 .theme-preview {
-  width: 80px;
-  height: 80px;
-  border-radius: 16px;
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 32rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-bottom: 16rpx;
   border: 3px solid transparent;
   transition: all var(--transition-base);
 }
@@ -247,11 +381,11 @@ const clearData = () => {
 }
 
 .theme-icon {
-  font-size: 32px;
+  font-size: 64rpx;
 }
 
 .theme-name {
-  font-size: 14px;
+  font-size: 28rpx;
   color: var(--text-main);
 }
 
@@ -260,7 +394,7 @@ const clearData = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 0;
+  padding: 32rpx 0;
   border-bottom: 1px solid var(--border-color);
   cursor: pointer;
 }
@@ -274,20 +408,20 @@ const clearData = () => {
 }
 
 .setting-label {
-  font-size: 14px;
+  font-size: 28rpx;
   color: var(--text-main);
 }
 
 .setting-value {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16rpx;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 28rpx;
 }
 
 .arrow {
-  font-size: 20px;
+  font-size: 40rpx;
   color: var(--text-secondary);
 }
 
@@ -296,12 +430,12 @@ const clearData = () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 0;
-  gap: 8px;
+  padding: 40rpx 0;
+  gap: 16rpx;
 }
 
 .app-name {
-  font-size: 20px;
+  font-size: 40rpx;
   font-weight: bold;
   background: var(--gradient-primary);
   -webkit-background-clip: text;
@@ -310,14 +444,14 @@ const clearData = () => {
 }
 
 .app-version {
-  font-size: 12px;
+  font-size: 24rpx;
   color: var(--text-secondary);
 }
 
 .app-desc {
-  font-size: 14px;
+  font-size: 28rpx;
   color: var(--text-secondary);
   text-align: center;
-  margin-top: 8px;
+  margin-top: 16rpx;
 }
 </style>

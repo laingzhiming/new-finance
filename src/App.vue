@@ -97,9 +97,6 @@ onLaunch(() => {
     billStore.saveBills()
     console.log(`生成了 ${mockBills.length} 条测试数据`)
   }
-
-  // 应用主题
-  settingsStore.applyTheme(settingsStore.settings.theme)
 })
 
 onShow(() => {
@@ -132,8 +129,8 @@ page {
 
 /* 滚动条样式 (仅 H5) */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 12rpx;
+  height: 12rpx;
 }
 
 ::-webkit-scrollbar-track {
@@ -142,7 +139,7 @@ page {
 
 ::-webkit-scrollbar-thumb {
   background: var(--glass-border);
-  border-radius: 3px;
+  border-radius: 6rpx;
 }
 
 ::-webkit-scrollbar-thumb:hover {

@@ -18,7 +18,7 @@
     "@dcloudio/uni-components": "3.0.0-alpha-5000120260205002",
     "@dcloudio/uni-h5": "3.0.0-alpha-5000120260205002",
     "@dcloudio/uni-mp-weixin": "3.0.0-alpha-5000120260205002",
-    "echarts": "^5.5.1",
+    "@qiun/ucharts": "^2.5.0-20230101",
     "pinia": "^2.3.0",
     "vue": "^3.5.13"
   },

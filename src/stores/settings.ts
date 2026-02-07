@@ -32,27 +32,37 @@ export const useSettingsStore = defineStore('settings', {
       }
 
       if (typeof uni !== 'undefined' && typeof uni.setTabBarStyle === 'function') {
-        if (theme === Theme.Light) {
+        const tabBarStyle = theme === Theme.Light 
+          ? {
+              color: '#64748b',
+              selectedColor: '#4f46e5',
+              backgroundColor: '#f1f5f9',
+              borderStyle: 'black' as const
+            }
+          : theme === Theme.Cyberpunk
+          ? {
+              color: '#9ca3af',
+              selectedColor: '#00f0ff',
+              backgroundColor: '#0a0a0a',
+              borderStyle: 'black' as const
+            }
+          : {
+              color: '#9ca3af',
+              selectedColor: '#818cf8',
+              backgroundColor: '#0f172a',
+              borderStyle: 'black' as const
+            }
+
+        // 使用 try-catch 并增加 fail 回调，防止在非 TabBar 页面调用报错
+        try {
           uni.setTabBarStyle({
-            color: '#64748b',
-            selectedColor: '#4f46e5',
-            backgroundColor: '#f1f5f9',
-            borderStyle: 'black'
+            ...tabBarStyle,
+            fail: () => {
+              // 忽略在非 TabBar 页面调用的失败输出
+            }
           })
-        } else if (theme === Theme.Cyberpunk) {
-          uni.setTabBarStyle({
-            color: '#9ca3af',
-            selectedColor: '#00f0ff',
-            backgroundColor: '#0a0a0a',
-            borderStyle: 'black'
-          })
-        } else {
-          uni.setTabBarStyle({
-            color: '#9ca3af',
-            selectedColor: '#818cf8',
-            backgroundColor: '#0f172a',
-            borderStyle: 'black'
-          })
+        } catch (e) {
+          // 忽略同步调用的报错
         }
       }
     },
@@ -84,14 +94,25 @@ export const useSettingsStore = defineStore('settings', {
       }
     },
 
+    // 替换设置（用于导入）
+    replaceSettings(nextSettings: UserSettings) {
+      this.settings = {
+        ...this.settings,
+        ...nextSettings
+      }
+      this.applyTheme(this.settings.theme)
+      this.saveSettings()
+    },
+
     // 加载设置
     loadSettings() {
       try {
         const data = uni.getStorageSync('settings')
         if (data) {
           this.settings = JSON.parse(data)
-          this.applyTheme(this.settings.theme)
         }
+        // 无论是否加载到数据，都应用当前主题（默认或加载的）
+        this.applyTheme(this.settings.theme)
       } catch (e) {
         console.error('加载设置失败:', e)
       }

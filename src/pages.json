@@ -29,6 +29,13 @@
       }
     },
     {
+      "path": "pages/bill-detail",
+      "style": {
+        "navigationBarTitleText": "账单详情",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/404",
       "style": {
         "navigationBarTitleText": "页面未找到",

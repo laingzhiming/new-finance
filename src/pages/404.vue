@@ -23,40 +23,40 @@ const goHome = () => {
 
 <style scoped>
 .notfound-container {
-  min-height: 100vh;
+  min-height: calc(100vh - 51px);
   background: var(--bg-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 48rpx;
 }
 
 .notfound-card {
   width: 100%;
-  max-width: 360px;
+  max-width: 720rpx;
   text-align: center;
-  padding: 32px 24px;
+  padding: 64rpx 48rpx;
 }
 
 .notfound-title {
-  font-size: 64px;
+  font-size: 128rpx;
   font-weight: 800;
-  letter-spacing: 2px;
+  letter-spacing: 4rpx;
   color: var(--text-main);
 }
 
 .notfound-subtitle {
   display: block;
-  font-size: 18px;
+  font-size: 36rpx;
   color: var(--text-secondary);
-  margin: 8px 0 12px;
+  margin: 16rpx 0 24rpx;
 }
 
 .notfound-desc {
   display: block;
-  font-size: 14px;
+  font-size: 28rpx;
   color: var(--text-muted);
-  margin-bottom: 20px;
+  margin-bottom: 40rpx;
 }
 
 .notfound-actions {
@@ -65,11 +65,11 @@ const goHome = () => {
 }
 
 .action-btn {
-  padding: 10px 18px;
-  border-radius: 12px;
+  padding: 20rpx 36rpx;
+  border-radius: 24rpx;
   background: var(--bg-tertiary);
   color: var(--text-main);
-  font-size: 14px;
+  font-size: 28rpx;
   cursor: pointer;
 }
 
