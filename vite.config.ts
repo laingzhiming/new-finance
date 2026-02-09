@@ -3,6 +3,7 @@ import uni from '@dcloudio/vite-plugin-uni'
 import UnoCSS from 'unocss/vite'
 
 export default defineConfig({
+  base: '/h5/',
   plugins: [uni(), UnoCSS()],
   resolve: {
     alias: {
@@ -18,6 +19,6 @@ export default defineConfig({
   },
   server: {
     port: 8888,
-    cors: true,
+    cors: true
   }
 })
