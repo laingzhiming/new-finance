@@ -8,7 +8,7 @@
   "h5": {
     "router": {
       "mode": "history",
-      "base": "/"
+      "base": "/h5/"
     },
     "optimization": {
       "treeShaking": {
