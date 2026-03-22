@@ -29,6 +29,11 @@
       </view>
     </view>
 
+    <!-- 超支提示 -->
+    <view v-if="monthOverspend.over" class="overspend-banner glass-card slide-in-up">
+      <text class="overspend-text">{{ currentMonth }} 支出：¥{{ monthOverspend.total.toFixed(2) }}，阈值 ¥{{ (monthOverspend.threshold ?? 0).toFixed(2) }}</text>
+    </view>
+
     <!-- 图表容器 -->
     <view class="chart-section glass-card slide-in-up">
       <text class="section-title">支出趋势</text>
@@ -170,6 +175,14 @@ const buildStatisticsForMonth = (yearMonth: string): StatisticsData => {
   }
 }
 
+// 当前选中月份的超支状态
+const monthOverspend = computed(() => {
+  const [yearStr, monthStr] = selectedMonth.value.split('-')
+  const year = Number(yearStr)
+  const month = Number(monthStr) - 1
+  return billStore.checkMonthlyOverBudget(year, month)
+})
+
 // 统计数据
 const statistics = computed<StatisticsData>(() => buildStatisticsForMonth(selectedMonth.value))
 
@@ -266,7 +279,6 @@ const buildTrendChartData = () => {
 
 const buildPieChartData = () => {
   const categoryExpense = statistics.value.categoryExpense
-  const total = statistics.value.totalExpense
 
   const categoryList = Object.entries(categoryExpense)
     .filter(([_, amount]) => amount > 0)
@@ -597,5 +609,18 @@ onMounted(() => {
   width: 120rpx;
   text-align: right;
   flex-shrink: 0;
+}
+
+.overspend-banner {
+  margin: 0 32rpx 24rpx;
+  padding: 20rpx 28rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 99, 71, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.12);
+}
+
+.overspend-text {
+  color: var(--error-color);
+  font-size: 28rpx;
 }
 </style>

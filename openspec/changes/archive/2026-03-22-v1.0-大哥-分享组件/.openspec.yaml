@@ -1,0 +1,5 @@
+name: v1.0-大哥-分享组件
+title: 分享海报组件（AppSharePoster）
+schema: spec-driven
+createdBy: copilot
+description: 开发 `AppSharePoster.vue` 组件，用于生成/展示分享海报，符合项目样式与约定

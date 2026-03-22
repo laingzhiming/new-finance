@@ -36,6 +36,11 @@
       </view>
     </view>
 
+    <!-- 超支提示 -->
+    <view v-if="overspend.over" class="overspend-banner glass-card slide-in-up">
+      <text class="overspend-text">本月支出已超过阈值：¥{{ overspend.total.toFixed(2) }} （阈值 ¥{{ (overspend.threshold ?? 0).toFixed(2) }}）</text>
+    </view>
+
     <!-- 余额卡片 - 玻璃拟态 3D 质感 -->
     <view class="balance-card glass-card neon-glow soft-float">
       <view class="balance-header">
@@ -107,13 +112,31 @@
         </view>
       </view>
     </view>
+
+    <!-- 分享海报示例 -->
+    <view class="share-section glass-card slide-in-up">
+      <text class="section-title">分享海报示例</text>
+      <view class="share-actions">
+        <view class="btn btn-primary" @tap="showPoster = true">生成并保存海报</view>
+        <view v-if="posterBusy" class="busy-text">生成中...</view>
+      </view>
+
+      <AppSharePoster
+        v-if="showPoster"
+        :title="posterTitle"
+        :image-src="posterImage"
+        @save-success="onSaveSuccess"
+        @save-fail="onSaveFail"
+        @update:busy="(v) => (posterBusy = v)"
+      />
+    </view>
   </view>
 </template>
 
 <script lang="ts" setup>
 import { computed, onMounted, ref } from 'vue'
 import type { BillItem, StatisticsData } from '@/types'
-import { BillCategory, CategoryConfigMap, BillType } from '@/types'
+import { BillCategory, CategoryConfigMap } from '@/types'
 import { useBillStore } from '@/stores/bill'
 import { useNumberAnimation } from '@/composables/useNumberAnimation'
 
@@ -155,6 +178,12 @@ const filteredBills = computed<BillItem[]>(() => {
   }
 
   return filtered
+})
+
+// 当月超支状态
+const overspend = computed(() => {
+  const now = new Date()
+  return billStore.checkMonthlyOverBudget(now.getFullYear(), now.getMonth())
 })
 
 const displayBills = computed<BillItem[]>(() => filteredBills.value.slice(0, 5))
@@ -228,13 +257,52 @@ const viewBillDetail = (bill: BillItem) => {
 onMounted(() => {
   // 加载数据
   billStore.loadBills()
+  billStore.loadOverspendConfig()
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth()
+  const res = billStore.checkMonthlyOverBudget(year, month)
+  if (res.shouldNotify) {
+    uni.showToast({ title: `本月已超出阈值：¥${res.total.toFixed(2)}`, icon: 'none' })
+    billStore.markMonthNotified(year, month)
+  }
 })
+
+import AppSharePoster from '@/components/AppSharePoster.vue'
+
+// 分享海报示例控制
+const showPoster = ref(false)
+const posterBusy = ref(false)
+const posterTitle = ref('记账海报')
+const posterImage = ref('')
+
+const onSaveSuccess = () => {
+  uni.showToast({ title: '保存成功' })
+  showPoster.value = false
+}
+
+const onSaveFail = () => {
+  uni.showToast({ title: '保存失败', icon: 'none' })
+}
 </script>
 
 <style scoped>
 .home-container {
   min-height: calc(100vh - 51px);
   background: var(--bg-primary);
+}
+
+.overspend-banner {
+  margin: 0 32rpx 24rpx;
+  padding: 20rpx 28rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 99, 71, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.12);
+}
+
+.overspend-text {
+  color: var(--error-color);
+  font-size: 28rpx;
 }
 
 /* 搜索筛选栏 */

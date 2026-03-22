@@ -49,6 +49,25 @@
       </view>
     </view>
 
+    <!-- 超支预警设置 -->
+    <view class="settings-section glass-card slide-in-up">
+      <text class="section-title">超支预警</text>
+      <view class="setting-item">
+        <text class="setting-label">启用月度预警</text>
+        <switch :checked="overspendEnabled" @change="toggleOverspend" color="#FF6B6B" />
+      </view>
+      <view class="setting-item threshold-row">
+        <text class="setting-label">月度阈值</text>
+        <view class="threshold-input-wrap">
+          <input class="threshold-input" type="number" v-model.number="overspendThreshold" placeholder="输入阈值（元）" />
+          <text class="threshold-unit">元</text>
+        </view>
+      </view>
+      <view class="setting-item">
+        <button class="btn-primary" @click="saveOverspendSettings">保存超支设置</button>
+      </view>
+    </view>
+
     <!-- 数据管理 -->
     <view class="settings-section glass-card slide-in-up">
       <text class="section-title">数据管理</text>
@@ -97,6 +116,7 @@
 
 <script lang="ts" setup>
 import { computed, ref } from 'vue'
+import { onMounted } from 'vue'
 import { Theme } from '@/types'
 import { useSettingsStore } from '@/stores/settings'
 import { useBillStore } from '@/stores/bill'
@@ -308,6 +328,37 @@ const clearData = () => {
     }
   })
 }
+
+// 超支预警配置相关
+const overspendEnabled = ref(false)
+const overspendThreshold = ref(0)
+
+onMounted(() => {
+  // 加载账单与超支配置
+  billStore.loadBills()
+  billStore.loadOverspendConfig()
+  const cfg = billStore.overspendConfig
+  if (cfg) {
+    overspendEnabled.value = !!cfg.enabled
+    // cfg.monthlyThreshold 存为分，UI 显示元
+    overspendThreshold.value = (cfg.monthlyThreshold || 0) / 100
+  }
+})
+
+const saveOverspendSettings = () => {
+  const cfg = {
+    enabled: overspendEnabled.value,
+    // 存为分（整数）以提高精度
+    monthlyThreshold: Math.round((Number(overspendThreshold.value) || 0) * 100),
+    lastNotifiedMonth: billStore.overspendConfig?.lastNotifiedMonth
+  }
+  billStore.saveOverspendConfig(cfg)
+  uni.showToast({ title: '已保存超支设置', icon: 'success' })
+}
+
+const toggleOverspend = (e: any) => {
+  overspendEnabled.value = e.detail?.value ?? !!e.detail
+}
 </script>
 
 <style scoped>
@@ -397,6 +448,26 @@ const clearData = () => {
   padding: 32rpx 0;
   border-bottom: 1px solid var(--border-color);
   cursor: pointer;
+}
+
+.threshold-row .threshold-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.threshold-input {
+  width: 240rpx;
+  padding: 12rpx 16rpx;
+  border-radius: 12rpx;
+  border: 1px solid var(--glass-border);
+  background: var(--bg-tertiary);
+  color: var(--text-main);
+}
+
+.threshold-unit {
+  font-size: 28rpx;
+  color: var(--text-secondary);
 }
 
 .setting-item:last-child {

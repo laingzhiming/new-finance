@@ -132,3 +132,13 @@ export interface AnimationConfig {
   duration: number
   easing: string
 }
+
+/**
+ * 超支预警配置
+ */
+export interface OverspendConfig {
+  enabled: boolean
+  // monthlyThreshold 以“分”为单位（整数），UI 显示/输入为元，需在保存/读取时转换
+  monthlyThreshold: number
+  lastNotifiedMonth?: string
+}

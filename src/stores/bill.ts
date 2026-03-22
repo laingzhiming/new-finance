@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
-import type { BillItem, StatisticsData, BillCategory } from '@/types'
+import type { BillItem, StatisticsData, BillCategory, OverspendConfig } from '@/types'
 import { BillType } from '@/types'
 
 interface BillState {
   bills: BillItem[]
   draftType?: BillType
+  overspendConfig?: OverspendConfig
 }
 
 export const useBillStore = defineStore('bill', {
@@ -117,6 +118,16 @@ export const useBillStore = defineStore('bill', {
       }
     },
 
+    // 保存超支预警配置
+    saveOverspendConfig(cfg: OverspendConfig) {
+      this.overspendConfig = cfg
+      try {
+        uni.setStorageSync('overspendConfig', JSON.stringify(cfg))
+      } catch (e) {
+        console.error('保存超支配置失败:', e)
+      }
+    },
+
     // 从本地存储加载
     loadBills() {
       try {
@@ -131,6 +142,8 @@ export const useBillStore = defineStore('bill', {
         console.error('加载账单失败:', e)
         this.initializeSampleData()
       }
+      // 同步加载超支配置（容错）
+      this.loadOverspendConfig()
     },
 
     // 初始化示例数据
@@ -177,6 +190,63 @@ export const useBillStore = defineStore('bill', {
 
       this.bills = sampleBills
       this.saveBills()
+    }
+
+    ,
+
+    // 加载超支预警配置
+    loadOverspendConfig() {
+      try {
+        const raw = uni.getStorageSync('overspendConfig')
+        if (raw) {
+          this.overspendConfig = JSON.parse(raw)
+        } else {
+          this.overspendConfig = { enabled: false, monthlyThreshold: 0 }
+        }
+      } catch (e) {
+        console.error('加载超支配置失败:', e)
+        this.overspendConfig = { enabled: false, monthlyThreshold: 0 }
+      }
+    },
+
+    // 获取指定年月的消费总额（单位与账单 amount 保持一致）
+    getMonthlyTotal(year: number, month: number): number {
+      const total = this.bills
+        .filter(bill => {
+          const d = new Date(bill.date)
+          return d.getFullYear() === year && d.getMonth() === month && bill.type !== BillType.Income
+        })
+        .reduce((sum, b) => sum + b.amount, 0)
+      return total
+    },
+
+    // 检查指定年月是否超出预算，返回详细信息
+    checkMonthlyOverBudget(year: number, month: number) {
+      const total = this.getMonthlyTotal(year, month)
+      const cfg = this.overspendConfig
+      const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`
+      if (!cfg || !cfg.enabled || !cfg.monthlyThreshold) {
+        return { over: false, total, threshold: cfg ? cfg.monthlyThreshold / 100 : undefined, shouldNotify: false }
+      }
+      // monthlyThreshold 存为分，账单 amount 单位为元，需转换
+      const thresholdYuan = cfg.monthlyThreshold / 100
+      const over = total > thresholdYuan
+      const shouldNotify = over && cfg.lastNotifiedMonth !== monthKey
+      return { over, total, threshold: thresholdYuan, shouldNotify }
+    },
+
+    // 标记指定年月已通知，避免重复通知
+    markMonthNotified(year: number, month: number) {
+      const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`
+      if (!this.overspendConfig) {
+        this.overspendConfig = { enabled: false, monthlyThreshold: 0 }
+      }
+      this.overspendConfig.lastNotifiedMonth = monthKey
+      try {
+        uni.setStorageSync('overspendConfig', JSON.stringify(this.overspendConfig))
+      } catch (e) {
+        console.error('保存超支配置失败:', e)
+      }
     }
   }
 })
